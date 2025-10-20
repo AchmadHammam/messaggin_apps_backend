@@ -3,7 +3,7 @@ import bodyParser from "body-parser";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { user } from "../types/user";
-function authenticateToken(req: Request, res: Response, next: NextFunction) {
+export function authenticateToken(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1]; // Bearer <token>
 
@@ -19,4 +19,14 @@ function authenticateToken(req: Request, res: Response, next: NextFunction) {
   });
 }
 
-export default authenticateToken
+export function authenticateSocketToken(token: string): Promise<user | null> {
+  return new Promise((resolve, reject) => {
+    jwt.verify(token, process.env.KEY!, (err, decoded) => {
+      if (err) {
+        resolve(null);
+      } else {
+        resolve(decoded as user);
+      }
+    });
+  });
+}

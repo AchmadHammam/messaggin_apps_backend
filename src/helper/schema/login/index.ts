@@ -10,4 +10,5 @@ export const LoginSchema = z.object({
     { message: "User not found" }
   ),
   password: z.string(),
+  public_key: z.string(),
 });

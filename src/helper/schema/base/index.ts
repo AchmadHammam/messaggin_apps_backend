@@ -6,11 +6,11 @@ export const paginationSchema = z.object({
       return parseInt(page);
     }
     return page;
-  }, z.number().min(1).default(1)),
+  }, z.number().min(1)),
   limit: z.preprocess((limit) => {
     if (typeof limit === "string") {
       return parseInt(limit);
     }
     return limit;
-  }, z.number().min(1).max(100).default(10)),
+  }, z.number().min(1).max(100)),
 });
