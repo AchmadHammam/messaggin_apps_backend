@@ -13,7 +13,7 @@ async function Login(req: Request, res: Response) {
   const validation = await LoginSchema.safeParseAsync(data);
 
   if (validation.error) {
-    res.status(401).json({
+    return res.status(422).json({
       message: validation.error.message,
     });
   }
@@ -31,7 +31,7 @@ async function Login(req: Request, res: Response) {
   });
 
   if (!user) {
-    return res.status(401).json({ message: "Username atau password salah" });
+    return res.status(422).json({ message: "Username atau password salah" });
   }
   //check user screet
   var us = await prisma.userScreet.findFirst({
@@ -56,13 +56,13 @@ async function Login(req: Request, res: Response) {
 
   const validPassword = await bcrypt.compare(parseData?.password!, user?.password!);
   if (!validPassword) {
-    return res.status(401).json({ message: "Username atau password salah" });
+    return res.status(422).json({ message: "Username atau password salah" });
   }
 
   const token = jwt.sign({ id: user?.id, email: user?.email }, process.env.KEY!, {
     expiresIn: "1D",
   });
-  res.json({
+  return res.json({
     message: "login berhasil",
     data: {
       user: {
@@ -78,7 +78,7 @@ async function Register(req: Request, res: Response) {
   const data = await req.body;
   const validation = await RegisterSchema.safeParseAsync(data);
   if (validation.error) {
-    res.status(401).json({ message: validation.error.message });
+    return res.status(422).json({ message: validation.error.message });
   }
   const parseData = validation.data;
   const salt = await bcrypt.genSalt(10);
@@ -94,7 +94,7 @@ async function Register(req: Request, res: Response) {
       createdBy: parseData?.nama!,
     },
   });
-  res.json({ message: "success", data: user });
+  return res.json({ message: "success", data: user });
 }
 
 async function Verify(req: Request, res: Response) {
@@ -106,9 +106,9 @@ async function Verify(req: Request, res: Response) {
       if (err) return res.status(403).json({ message: "Token tidak valid" });
     });
   } else {
-    return res.status(401).json({ message: "Token tidak ada" });
+    return res.status(422).json({ message: "Token tidak ada" });
   }
-  res.json({ message: "success" });
+  return res.json({ message: "success" });
 }
 routerAuth.post("/login", Login);
 routerAuth.post("/register", Register);

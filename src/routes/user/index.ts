@@ -10,11 +10,11 @@ async function FetchListData(req: Request, res: Response) {
   const limitQuery = req.query.limit || 10;
   const validation = paginationSchema.safeParse({ pageQuery, limitQuery });
   if (!validation.success) {
-    res.status(401).json({ message: validation.error.message });
+    return res.status(422).json({ message: validation.error.message });
   }
   const { page, limit } = validation.data!;
   const data = await prisma.users.findMany({ skip: (page - 1) * limit, take: limit });
-  res.json({
+  return res.json({
     message: "success",
     data: {
       page,
@@ -34,9 +34,12 @@ async function GetScreet(req: Request, res: Response) {
       userId: true,
     },
   });
-  res.json({
+  return res.json({
     message: "success",
-    data,
+    data: {
+      userId: data?.userId,
+      publicKey: data?.publicKey,
+    },
   });
 }
 

@@ -30,7 +30,7 @@ const io = new Server(server, {
 });
 io.on("connection", (socket) => {
   const token = socket.handshake.query.token as string;
-  console.log(token);
+  console.log(socket.id);
 
   socket.on("register", async (userId) => {
     const user = await authenticateSocketToken(token);
@@ -38,10 +38,11 @@ io.on("connection", (socket) => {
   });
 
   socket.on("send_message", async (data: number) => {
-    console.log("Pesan masuk:", data, moment().format("YYYY-MM-DD HH:mm:ss"));
+    console.log("Pesan masuk:", data, moment().format("HH:mm:ss"));
     if (data) {
       const socketId = await getSocketId({ chatId: data });
       socket.to(socketId!).emit("reload", true);
+      // socket.emit("reload", true);
     }
   });
   // Simpan user yang terhubung

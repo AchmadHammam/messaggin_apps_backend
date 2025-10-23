@@ -8,7 +8,7 @@ export function authenticateToken(req: Request, res: Response, next: NextFunctio
   const token = authHeader && authHeader.split(" ")[1]; // Bearer <token>
 
   if (!token) {
-    return res.status(401).json({ message: "Token tidak ada" });
+    return res.status(422).json({ message: "Token tidak ada" });
   }
 
   jwt.verify(token, process.env.KEY!, (err, user) => {

@@ -1,7 +1,7 @@
 import { Request, Response, Router } from "express";
 import { user } from "@/helper/types/user";
 import prisma from "@/helper/db/db";
-import {authenticateToken} from "@/helper/middleware";
+import { authenticateToken } from "@/helper/middleware";
 const profileRouter = Router();
 
 async function Profile(req: Request, res: Response) {
@@ -11,7 +11,7 @@ async function Profile(req: Request, res: Response) {
       id: user.id,
     },
   });
-  res.json({
+  return res.json({
     message: "success",
     data: detailUser,
   });

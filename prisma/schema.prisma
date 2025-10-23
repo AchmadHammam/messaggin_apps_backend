@@ -17,11 +17,13 @@ model Users {
   updatedAt              DateTime           @default(now()) @updatedAt @map("updated_at")
   updatedBy              String             @map("updated_by")
   email                  String             @unique
-  ChatMessage            ChatMessage[]
   userChatPersonalRooms1 ChatPersonalRoom[]
   userChatPersonalRooms2 ChatPersonalRoom[] @relation("user2")
   UserScreet             UserScreet?
   UserWebSocket          UserWebSocket?
+  senderChatMessages     ChatMessage[]      @relation("senderChatMessages")
+  recevierChatMessages   ChatMessage[]      @relation("recevierChatMessages")
+  readerChatMessages       ChatMessage[]
 
   @@map("users")
 }
@@ -45,7 +47,9 @@ model ChatPersonalRoom {
 model ChatMessage {
   id                 Int              @id @unique @default(autoincrement())
   chatPersonalRoomId Int              @map("chat_personal_room_id")
+  readerId             Int              @map("reader_id")
   senderId           Int              @map("sender_id")
+  receiverId         Int              @map("receiver_id")
   message            String
   createdAt          DateTime         @default(now()) @map("created_at")
   createdBy          String           @map("created_by")
@@ -53,7 +57,9 @@ model ChatMessage {
   updatedBy          String           @map("updated_by")
   isRead             Boolean          @default(false) @map("is_read")
   chatPersonalRoom   ChatPersonalRoom @relation(fields: [chatPersonalRoomId], references: [id])
-  sender             Users            @relation(fields: [senderId], references: [id])
+  sender             Users            @relation("recevierChatMessages", fields: [senderId], references: [id])
+  receiver           Users            @relation("senderChatMessages", fields: [receiverId], references: [id])
+  user               Users            @relation(fields: [readerId], references: [id])
 
   @@map("chat_message")
 }

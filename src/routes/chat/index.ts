@@ -1,5 +1,5 @@
 import prisma from "@/helper/db/db";
-import {authenticateToken} from "@/helper/middleware";
+import { authenticateToken } from "@/helper/middleware";
 import { paginationSchema } from "@/helper/schema/base";
 import { Router, Request, Response } from "express";
 import { user } from "@/helper/types/user";
@@ -14,7 +14,7 @@ async function FetchListRoomData(req: Request, res: Response) {
   const user = (req as any).user as user;
 
   if (!validation.success) {
-    res.status(401).json({ message: validation.error.message });
+    return res.status(422).json({ message: validation.error.message });
   }
   const { page, limit } = validation.data!;
 
@@ -49,9 +49,13 @@ async function FetchListRoomData(req: Request, res: Response) {
       },
 
       ChatMessage: {
+        where: {
+          readerId: user.id,
+        },
         select: {
           id: true,
           message: true,
+          readerId: true,
           createdAt: true,
         },
         take: 1,
@@ -68,23 +72,21 @@ async function FetchListRoomData(req: Request, res: Response) {
   });
 
   var totalNotRead = data.map(async (v) => {
-    const isNotRedChat = await prisma.chatPersonalRoom.count({
+    const isNotRaedChat = await prisma.chatPersonalRoom.count({
       where: {
         id: v.id,
         ChatMessage: {
           some: {
-            senderId: {
-              not: user.id,
-            },
+            readerId: user.id,
             isRead: false,
           },
         },
       },
     });
-    return isNotRedChat;
+    return isNotRaedChat;
   });
   var resultPromise = await Promise.all(totalNotRead);
-  res.json({
+  return res.json({
     message: "success",
     data: {
       page,
@@ -108,37 +110,42 @@ async function FetchListData(req: Request, res: Response) {
   const user = (req as any).user as user;
 
   if (!validation.success) {
-    res.status(401).json({ message: validation.error.message });
+    return res.status(422).json({ message: validation.error.message });
   }
   const { page, limit } = validation.data!;
 
-  const data = await prisma.chat_user_view.findMany({
+  const data = await prisma.chatMessage.findMany({
     where: {
-      chat_personal_room_id: chatRoomId,
+      chatPersonalRoomId: chatRoomId,
+      readerId: user.id,
+    },
+    include: {
+      sender: true,
+      receiver: true,
     },
     skip: (page - 1) * limit,
     take: limit,
     orderBy: {
-      created_at: "desc",
+      createdAt: "desc",
     },
   });
 
-  res.json({
+  return res.json({
     message: "success",
     data: {
       total: data.length,
       data: data.map((v) => {
         return {
           id: v.id,
-          chatPersonalRoomId: v.chat_personal_room_id,
-          senderId: v.sender_id,
-          senderName: v.sender_name,
-          receiverId: v.receiver_id,
-          receiverName: v.receiver_name,
+          chatPersonalRoomId: v.chatPersonalRoomId,
+          senderId: v.senderId,
+          senderName: v.sender.nama,
+          receiverId: v.receiver.id,
+          receiverName: v.receiver.nama,
           message: v.message,
-          isRead: v.is_read,
-          createdAt: v.created_at,
-          updated_at: v.updated_at,
+          isRead: v.isRead,
+          createdAt: v.createdAt,
+          updatedAt: v.updatedAt,
         };
       }),
     },
@@ -147,11 +154,16 @@ async function FetchListData(req: Request, res: Response) {
 
 async function SendMessage(req: Request, res: Response) {
   const data = await req.body;
+
   const validation = sendMessageSchema.safeParse(data);
-  if (validation.error) {
-    res.status(401).json({ message: validation.error.message });
+
+  if (validation.success == false) {
+    return res.status(422).json({ message: validation.error.message });
   }
+
   const parseData = validation.data;
+  console.log(validation.success);
+
   var user = (req as any).user as user;
   // check user
   user = (await prisma.users.findFirst({
@@ -161,22 +173,34 @@ async function SendMessage(req: Request, res: Response) {
     select: {
       id: true,
       email: true,
-      password: true,
       nama: true,
     },
   })) as user;
-  const message = await prisma.chatMessage.create({
-    data: {
-      message: parseData?.message!,
-      senderId: user.id,
-      chatPersonalRoomId: parseData?.chatRoomId!,
-      updatedBy: user.nama,
-      createdBy: user.nama,
-    },
+  const message = await prisma.chatMessage.createManyAndReturn({
+    data: [
+      {
+        readerId: parseData?.sender.id!,
+        chatPersonalRoomId: parseData?.chatRoomId!,
+        senderId: parseData?.sender.id!,
+        receiverId: parseData?.recevier.id!,
+        message: parseData?.sender.message!,
+        createdBy: user.nama,
+        updatedBy: user.nama,
+      },
+      {
+        readerId: parseData?.recevier.id!,
+        chatPersonalRoomId: parseData?.chatRoomId!,
+        senderId: parseData?.sender.id!,
+        receiverId: parseData?.recevier.id!,
+        message: parseData?.recevier.message!,
+        createdBy: user.nama,
+        updatedBy: user.nama,
+      },
+    ],
   });
-  res.json({
+  return res.json({
     message: "success",
-    data: message,
+    data: message.find((v) => v.readerId === user.id),
   });
 }
 routerChat.get("/room", authenticateToken, FetchListRoomData);

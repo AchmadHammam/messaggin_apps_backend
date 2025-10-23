@@ -1,7 +1,14 @@
 import z from "zod";
 
 export const sendMessageSchema = z.object({
-  message: z.string().min(1),
   chatRoomId: z.number(),
+  recevier: z.object({
+    id: z.number(),
+    message: z.string(),
+  }),
+  sender: z.object({
+    id: z.number(),
+    message: z.string(),
+  }),
   isFile: z.boolean().default(false),
 });
