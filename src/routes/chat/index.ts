@@ -3,7 +3,8 @@ import { authenticateToken } from "@/helper/middleware";
 import { paginationSchema } from "@/helper/schema/base";
 import { Router, Request, Response } from "express";
 import { user } from "@/helper/types/user";
-import { sendMessageSchema } from "@/helper/schema/chat";
+import { createRoomSchema, sendMessageSchema } from "@/helper/schema/chat";
+import { randomUUID } from "crypto";
 
 const routerChat = Router();
 
@@ -152,6 +153,91 @@ async function FetchListData(req: Request, res: Response) {
   });
 }
 
+async function CreateRoom(req: Request, res: Response) {
+  const data = await req.body;
+
+  const validation = createRoomSchema.safeParse(data);
+
+  if (validation.success == false) {
+    return res.status(422).json({ message: validation.error.message });
+  }
+  const parseData = validation.data;
+
+  var user = (req as any).user as user;
+  // check user
+  user = (await prisma.users.findFirst({
+    where: {
+      id: user.id,
+    },
+    select: {
+      id: true,
+      email: true,
+      nama: true,
+    },
+  })) as user;
+
+  if (!user) {
+    return res.status(422).json({ message: "User not found" });
+  }
+  const check = await prisma.chatPersonalRoom.findFirst({
+    where: {
+      OR: [
+        {
+          AND: [
+            {
+              user1Id: user.id,
+            },
+            {
+              user2Id: parseData.recevierId,
+            },
+          ],
+        },
+        {
+          AND: [
+            {
+              user1Id: parseData.recevierId,
+            },
+            {
+              user2Id: user.id,
+            },
+          ],
+        },
+      ],
+    },
+    include: {
+      user1: true,
+      user2: true,
+    },
+  });
+  var room;
+  const code = randomUUID().toLowerCase().replace("-", "").slice(0, 12);
+  if (!check) {
+    room = await prisma.chatPersonalRoom.create({
+      data: {
+        code: code,
+        user1Id: user.id,
+        user2Id: parseData.recevierId,
+        createdBy: user.nama,
+        lastMessageBy: user.nama,
+      },
+      include: {
+        user1: true,
+        user2: true,
+      },
+    });
+  }
+  return res.json({
+    message: "success",
+    data: {
+      id: room?.id ?? check?.id,
+      user1: room?.user1 ?? check?.user1,
+      user2: room?.user2 ?? check?.user2,
+      lastMessageAt: room?.lastMessageAt ?? check?.lastMessageAt,
+      lastMessageBy: room?.lastMessageBy ?? check?.lastMessageBy,
+    },
+  });
+}
+
 async function SendMessage(req: Request, res: Response) {
   const data = await req.body;
 
@@ -204,6 +290,7 @@ async function SendMessage(req: Request, res: Response) {
   });
 }
 routerChat.get("/room", authenticateToken, FetchListRoomData);
+routerChat.post("/room", authenticateToken, CreateRoom);
 routerChat.post("/", authenticateToken, SendMessage);
 routerChat.get("/:chatRoomId", authenticateToken, FetchListData);
 export default routerChat;

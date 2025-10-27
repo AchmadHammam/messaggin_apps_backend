@@ -1,6 +1,7 @@
 import prisma from "@/helper/db/db";
 import { authenticateToken } from "@/helper/middleware";
 import { paginationSchema } from "@/helper/schema/base";
+import { user } from "@/helper/types/user";
 import { Router, Request, Response } from "express";
 
 const routerUser = Router();
@@ -8,12 +9,24 @@ const routerUser = Router();
 async function FetchListData(req: Request, res: Response) {
   const pageQuery = req.query.page || 1;
   const limitQuery = req.query.limit || 10;
-  const validation = paginationSchema.safeParse({ pageQuery, limitQuery });
+  const validation = paginationSchema.safeParse({
+    page: pageQuery,
+    limit: limitQuery,
+  });
   if (!validation.success) {
     return res.status(422).json({ message: validation.error.message });
   }
+  const user: user = (req as any).user;
   const { page, limit } = validation.data!;
-  const data = await prisma.users.findMany({ skip: (page - 1) * limit, take: limit });
+  const data = await prisma.users.findMany({
+    where: {
+      NOT: {
+        id: user.id,
+      },
+    },
+    skip: (page - 1) * limit,
+    take: limit,
+  });
   return res.json({
     message: "success",
     data: {

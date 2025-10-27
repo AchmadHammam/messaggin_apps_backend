@@ -42,7 +42,7 @@ io.on("connection", (socket) => {
     if (data) {
       const socketId = await getSocketId({ chatId: data });
       socket.to(socketId!).emit("reload", true);
-      // socket.emit("reload", true);
+      socket.emit("reload", true);
     }
   });
   // Simpan user yang terhubung

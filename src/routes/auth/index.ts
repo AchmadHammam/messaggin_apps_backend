@@ -5,6 +5,7 @@ import prisma from "@/helper/db/db";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { RegisterSchema } from "@/helper/schema/register";
 import { authenticateToken } from "@/helper/middleware";
+import { user } from "@/helper/types/user";
 
 const routerAuth = Router();
 
@@ -110,8 +111,21 @@ async function Verify(req: Request, res: Response) {
   }
   return res.json({ message: "success" });
 }
+async function Logout(req: Request, res: Response) {
+  const user: user = (req as any).user;
+  await prisma.chatMessage.deleteMany({
+    where: {
+      OR: [{ senderId: user.id }, { receiverId: user.id }],
+    },
+  });
+  return res.json({
+    message: "success",
+  });
+}
 routerAuth.post("/login", Login);
 routerAuth.post("/register", Register);
 routerAuth.post("/verify", authenticateToken, Verify);
+routerAuth.post("/logout", authenticateToken, Logout);
+
 
 export default routerAuth;

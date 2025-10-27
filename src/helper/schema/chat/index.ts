@@ -12,3 +12,7 @@ export const sendMessageSchema = z.object({
   }),
   isFile: z.boolean().default(false),
 });
+
+export const createRoomSchema = z.object({
+  recevierId: z.number(),
+});
